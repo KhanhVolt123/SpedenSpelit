@@ -7,12 +7,15 @@
 
 volatile int buttonNumber = -1;           // for buttons interrupt handler
 volatile bool newTimerInterrupt = false;  // for timer interrupt handler
-volatile int isrCallIndex = 0;            // this index is raised every time the isr is called.
+volatile unsigned int isrCallIndex = 0;   // this index is raised every time the isr is called.
 
 int numbers[100];                         // array for the numbers that are generated
 int score = 0;
 
-bool gameStarted = false;
+volatile bool gameStarted = false;
+
+bool showingResults = false;
+unsigned long resultTimer = 0;
 
 void setup() {
   Serial.begin(9600);
@@ -29,12 +32,14 @@ void setup() {
 }
 
 void loop() {
-  if(!gameStarted) idle();
+  if(showingResults && wait(2000, resultTimer)) showingResults = false;
+  if(!gameStarted && !showingResults) idle();
 
   gameInput();
 
   if(buttonNumber >= 0 && buttonNumber < 4) checkGame(buttonNumber);
   else if(buttonNumber == 4) startTheGame();
+  buttonNumber = -1;                      // Reset button number for next cycle
 
   if(newTimerInterrupt == true) {
     // new random number must be generated
@@ -43,7 +48,13 @@ void loop() {
     //Serial.println("Beep...Boop...Making a new number...");
 
     clearAllLeds();
-    setLed(numbers[isrCallIndex]);
+
+    noInterrupts();
+    unsigned int callIndex = isrCallIndex;    // Copy to a variable to avoid reading a broken int if the isr modifies the value while it's being read
+    interrupts();
+
+    setLed(numbers[(callIndex - 1) % 100]);   // isr increments isrCallIndex before this is called so the first number is 1.
+                                              // Also % 100 to keep the idx between 0,..,99 even if the actual index is way above that
 
     newTimerInterrupt = false;
   }
@@ -85,7 +96,7 @@ ISR(TIMER1_COMPA_vect) {
     if(isrCallIndex % 10 == 0) {
       // Increase speed
 
-      OCR1A -= 1000;
+      if(OCR1A > 3000) OCR1A -= 1000;   // Clamp the speed-up
     }
   }
 }
@@ -111,16 +122,19 @@ void checkGame(byte lastButtonPress) {
 
   if(numbers[score] != lastButtonPress) {
     Serial.println("Game over");
-    score = 0;
+    int btnsPressed = score;
 
-    showResult(score);
-
-    // reset shit
-    gameStarted = false;
-    OCR1A = 15624;
+    endTheGame(btnsPressed);
 
   } else {
     score++;
+
+    if(score >= 100) {
+      Serial.println("You won!");
+      
+      endTheGame(100);
+      return;
+    }
 
     writeHighAndLowNumber(score / 10, score % 10);
 
@@ -132,7 +146,7 @@ void checkGame(byte lastButtonPress) {
 void initializeGame() {
   clearAllLeds();
 
-  for(int i = 0; i < 200; i++) {
+  for(int i = 0; i < 100; i++) {
     numbers[i] = random(0, 4);
   }
 
@@ -142,26 +156,55 @@ void initializeGame() {
 void startTheGame() {
   initializeGame();
 
+  TCNT1 = 0;
+
   gameStarted = true;
+  showingResults = false;
+  newTimerInterrupt = false;
+  buttonNumber = -1;
+}
+
+// Actually more like reset game state but this name shall do
+void endTheGame(int scoreReached) {
+  // Reset stuff
+  gameStarted = false;
+  newTimerInterrupt = false;
+  isrCallIndex = 0;
+  score = 0;
+  OCR1A = 15624;
+  TCNT1 = 0;
+
+  // Wait before going back to idle so the player sees their score
+  // Done as a if statement at the top of loop()
+  showResult(scoreReached);
+  resultTimer = millis();
+  showingResults = true;
 }
 
 void idle() {
-  for(int i = 0; i < 10; i++) {
-    clearAllLeds();
+  static byte step = 0;
+  static unsigned long timer = 0;
 
-    switch(i) {
-      case 0: setLed(1); setLed(3); break;
-      case 1: setLed(0); setLed(2); break;
-      case 2: setLed(1); setLed(3); break;
-      case 3: setLed(0); setLed(2); break;
-      case 4: setLed(0); break;
-      case 5: setLed(1); break;
-      case 6: setLed(2); break;
-      case 7: setLed(3); break;
-      case 8: clearAllLeds(); break;
-      case 9: setAllLeds(); break;
-    }
+  if(!wait(500, timer)) return;
+  clearAllLeds();
 
-    delay(500);
+  switch(step) {
+    case 0: setLed(1); setLed(3); break;
+    case 1: setLed(0); setLed(2); break;
+    case 2: setLed(1); setLed(3); break;
+    case 3: setLed(0); setLed(2); break;
+    case 4: show2(2); break;
+    case 5: clearAllLeds(); break;
+    case 6: setAllLeds(); break;
   }
+
+  step = (step + 1) % 7;
+}
+
+bool wait(unsigned long ms, unsigned long &last) {
+  unsigned long now = millis();
+  if(now - last < ms) return false;
+  last = now;
+
+  return true;
 }
