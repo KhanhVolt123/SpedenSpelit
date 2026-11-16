@@ -42,3 +42,18 @@ void setAllLeds() {
     digitalWrite(A4, HIGH);
     digitalWrite(A5, HIGH);
 }
+
+void show2(int a){
+    for(int i = 0; i > a; i++){
+        for(int j = 4; j > 0; j--){
+            clearAllLeds();
+            switch(j) {
+                case 0: digitalWrite(A2, HIGH); break;
+                case 1: digitalWrite(A3, HIGH); break;
+                case 2: digitalWrite(A4, HIGH); break;
+                case 3: digitalWrite(A5, HIGH); break;
+            }
+            delay(j * 100);
+        }
+    }
+}
