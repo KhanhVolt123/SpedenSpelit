@@ -77,14 +77,16 @@ void initializeTimer(void) {
 }
 
 ISR(TIMER1_COMPA_vect) {
-  isrCallIndex++;
+  if(gameStarted) {
+    isrCallIndex++;
 
-  newTimerInterrupt = true;
-  
-  if(isrCallIndex % 10 == 0) {
-    // Increase speed
+    newTimerInterrupt = true;
+    
+    if(isrCallIndex % 10 == 0) {
+      // Increase speed
 
-    OCR1A -= 1000;
+      OCR1A -= 1000;
+    }
   }
 }
 
@@ -112,6 +114,11 @@ void checkGame(byte lastButtonPress) {
     score = 0;
 
     showResult(score);
+
+    // reset shit
+    gameStarted = false;
+    OCR1A = 15624;
+
   } else {
     score++;
 
