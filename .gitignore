@@ -1,0 +1,6 @@
+
+# Makefile build
+build/
+
+# Visual Studio Code settings
+.vscode/

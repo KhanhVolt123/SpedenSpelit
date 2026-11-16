@@ -1,5 +1,6 @@
 #ifndef SPEDENSPELIT_H
 #define SPEDENSPELIT_H
+
 #include <arduino.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
@@ -7,17 +8,16 @@
 /*
   initializeTimer() subroutine intializes Arduino Timer1 module to
   give interrupts at rate 1Hz
-  
 */
 void initializeTimer(void);
-// Intoduce TIMER1_COMPA_vect Interrupt SeRvice (ISR) function for timer.
+
+// Intoduce TIMER1_COMPA_vect Interrupt Service (ISR) function for timer.
 ISR(TIMER1_COMPA_vect);
 
 /*
   initializeGame() subroutine is used to initialize all variables
   needed to store random numbers and player button push data.
   This function is called from startTheGame() function.
-  
 */
 void initializeGame(void);
 
@@ -31,10 +31,8 @@ void initializeGame(void);
   
   Parameters
   byte lastButtonPress of the player 0 or 1 or 2 or 3
-  
 */
 void checkGame(byte);
-
 
 /*
   startTheGame() subroutine calls InitializeGame()
