@@ -5,10 +5,10 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
-
 const byte firstPin = 2; // First PinChangeInterrupt on D-bus
-const byte lastPin =  5; // Last PinChangeInterrupt on D-bus
-
+const byte secondPin =  3; // Last PinChangeInterrupt on D-bus
+const byte fourthPin = 4; // First PinChangeInterrupt on D-bus
+const byte lastPin =  5; // First PinChangeInterrupt on D-bus
 /* 
   initButtonsAndButtonInterrupts subroutine is called from Setup() function
   during the initialization of Speden Spelit. This function does the following:
@@ -19,6 +19,7 @@ const byte lastPin =  5; // Last PinChangeInterrupt on D-bus
 
 */
 void initButtonsAndButtonInterrupts(void);
+void debounce(void);
 
 
 // Intoduce PCINT2_vect Interrupt SeRvice (ISR) function for Pin Change Interrupt.
