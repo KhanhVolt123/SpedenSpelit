@@ -22,7 +22,10 @@ void setup() {
 
   randomSeed(analogRead(0));              // Random seed from analog pin 0s noise.
 
+  // Initialize hardware
   initializeLeds();
+  initializeDisplay();
+  initButtonsAndButtonInterrupts();
 
   // Timer setup
   noInterrupts();
@@ -114,7 +117,23 @@ void gameInput() {
     }
   }
 
-  // TODO: get real input from buttons
+  debounce();
+
+  // Select the first button that is pressed.
+  // Kinda doesn't work if the player presses multiple buttons
+  // But that isn't the idea of the game anyways...
+
+  // TODO: Move this to the debounce() since it'd make more sense there.
+  // TODO 2 (won't be needed if the above is done): buttonNumber isn't visible to this file because it's declared in the source file. 
+  for(int i = 0; i < 4; i++) {
+    if(buttonState[i] == LOW) {
+      buttonNumber = i;
+
+      // Redundant print as this is printed from the debounce() function as well.
+      Serial.print("Pressed: ");
+      Serial.println(i);
+    }
+  }
 }
 
 void checkGame(byte lastButtonPress) {
@@ -147,6 +166,8 @@ void initializeGame() {
   clearAllLeds();
 
   for(int i = 0; i < 100; i++) {
+    // Each index is a random number between 0 and 3 which 
+    // correspoonds to the leds that are lit up. 0 = A2, 1 = A3, 2 = A4, 3 = A5
     numbers[i] = random(0, 4);
   }
 
@@ -175,7 +196,7 @@ void endTheGame(int scoreReached) {
   TCNT1 = 0;
 
   // Wait before going back to idle so the player sees their score
-  // Done as a if statement at the top of loop()
+  // Done as an if statement at the top of loop()
   showResult(scoreReached);
   resultTimer = millis();
   showingResults = true;
@@ -198,6 +219,7 @@ void idle() {
     case 6: setAllLeds(); break;
   }
 
+  // Every 500 ms the step is incremented until it reaches 6 when it "goes back" to 0
   step = (step + 1) % 7;
 }
 
