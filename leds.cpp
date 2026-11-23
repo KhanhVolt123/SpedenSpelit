@@ -43,17 +43,20 @@ void setAllLeds() {         //Turns on all the leds
     digitalWrite(A5, HIGH);
 }
 
-void show2(int a){                  //Turns on the leds in order for a set amount of loops with the speed increasing at the end of each loop
-    for(int i = 0; i > a; i++){
-        for(int j = 4; j > 0; j--){
+void show2(int a){              //Turns on the leds in order for a set amount of loops with the speed increasing at the end of each loop
+    int d = 400;
+    for(int i = 0; i < a; i++){
+        for(int j = 0; j < 4; j++){
             clearAllLeds();
             switch(j) {
-                case 0: digitalWrite(A2, HIGH); break;
-                case 1: digitalWrite(A3, HIGH); break;
-                case 2: digitalWrite(A4, HIGH); break;
-                case 3: digitalWrite(A5, HIGH); break;
+            case 0: digitalWrite(A2, HIGH); break;
+            case 1: digitalWrite(A3, HIGH); break;
+            case 2: digitalWrite(A4, HIGH); break;
+            case 3: digitalWrite(A5, HIGH); break;
             }
-            delay(j * 100);
+            delay(d);
         }
+        d = max(d - 50, 50);
     }
+    clearAllLeds();
 }
