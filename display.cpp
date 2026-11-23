@@ -1,13 +1,13 @@
 #include "display.h"
 
-// Alla olevien muuttujien arvot kertoo minkä numeroiseen Arduinon digitaaliseen pinniin SN74HC595N:n pinnit on kytketty.
-uint8_t dataPin = 8; // Muuttuja Serial Data Input -pinnille (SER). Seuraavaksi siirtorekisteriin kirjoitettavan bitin arvo on 0 (LOW) tai 1 (HIGH).
-uint8_t oePin = 9; // Muuttuja Output Enable -pinnille. LOW = lähdöt QA-QH ovat käytössä, HIGH = lähdöt QA-QH eivät ole käytössä.
-uint8_t latchPin = 10; // Muuttuja Register Clock -pinnille. LOW -> HIGH = kopioidaan siirtorekisterin sisältö lähtöihin QA-QH.
-uint8_t clockPin = 11; // Muuttuja Shift Register Clock -pinnille. LOW -> HIGH = SER-pinnin päättämä arvo siirretään siirtorekisteriin.
-uint8_t resetPin = 12; // Muuttuja Shift Register Clear -pinnille. LOW = Kaikki bitit nollataan, HIGH = Normaali toiminta.
+// The values of the variables below tell us the number of the Arduino digital pin in which the referenced shift register pin is connected to.
+uint8_t dataPin = 8; // A variable for the Serial Data Input pin (SER). The next bit value to be written to the shift register is 0 (LOW) or 1 (HIGH).
+uint8_t oePin = 9; // A variable for the Output Enable pin (QA-QH). LOW = QA-QH outputs are used, HIGH = QA-QH outputs are not used.
+uint8_t latchPin = 10; // A variable for the Register Clock pin (RCLK). LOW -> HIGH = Copy everything inside the shift register to the QA-QH outputs.
+uint8_t clockPin = 11; // A variable for the Shift Register Clock pin (SRCLK). LOW -> HIGH = The value determined by the SER pin is moved to the shift register.
+uint8_t resetPin = 12; // A variable for the Shift Register Clear pin (SRCLR). LOW = All bits are reset, HIGH = Normal bit activity.
 
-byte numbers[10] = { // Tavutyyppinen taulukko, minkä jokainen binääriluku sytyttää tietyn luvun (0-9) tarvitsemat segmentit näytöllä.
+byte displayNumbers[10] = { // A byte type array. Every binary number in it lights up a specific number (0-9) in the segment display.
   B00111111, // 0
   B00000110, // 1
   B01011011, // 2
@@ -22,47 +22,55 @@ byte numbers[10] = { // Tavutyyppinen taulukko, minkä jokainen binääriluku sy
 
 void initializeDisplay(void) 
 {
-    for (int i = 8; i < 13; i++) // Kutsuttaessa funktiota määritetään Arduinon digitaaliset pinnit 8-12 lähtöpinneiksi (OUTPUT-modeen) for-loopilla.
+    for (int i = 8; i < 13; i++) // When the function is called using a for loop we'll set the states of Arduino digital pins 8-12 to output.
     { 
         pinMode(i, OUTPUT);
     }
 }
 
-void writeByte(uint8_t bits,bool last) // Tätä kutsutaan void loop()-funktion sisällä. bits on luku 0-9
+void writeByte(uint8_t bits,bool last)
 {
-    if (bits > 9) // Jos annettava kokonaisluku on suurempi kuin 9, poistutaan funktiosta.
+    if (bits > 9) // If the integer given is higher than 9, we exit the function.
     {
         return;
     }
-    digitalWrite(oePin, LOW); // Kutsuttaessa funktiota otetaan näytön segmentteihin yhdistetyt lähtöpinnit käyttöön.
-    digitalWrite(resetPin, HIGH); // Asetetaan SRCLR-pinni korkeaan tilaan, jotta bitit toimii normaalisti.
+    digitalWrite(oePin, LOW); // When the function is called we enable the output pins that are connected to the display segments.
+    digitalWrite(resetPin, HIGH); // Set the SRCLR pin state to high so that the bits work correctly.
 
-    if (last == true) // Jos halutaan tulostaa luku, niin last on true.
+    if (last == true) // If we want to print a number, last is true.
     {
-        digitalWrite(latchPin, LOW); // Asetetaan RCLK-pinni matalaan tilaan, jotta dataa voidaan kerätä rekisteriin.
+        digitalWrite(latchPin, LOW); // Set the RCLK pin state to low so data can be collected to the register.
 
-        byte value = numbers[bits]; // Tavutyyppinen muuttuja varastoimaan tiettyä numbers-taulukon alkiota.
+        byte value = displayNumbers[bits]; // A byte type variable to store a specific displayNumbers array element.
 
-        for (int i = 7; i >= 0; i--) // Lähetetään tavun bitit MSB-järjestyksessä (bitit 7...0).
+        for (int i = 7; i >= 0; i--) // Send the bits of the byte in the MSB order (bits 7...0).
         {
-            digitalWrite(clockPin, LOW); // Asetetaan SRCLK-pinni matalaan tilaan odottamaan kellopulssia.
-            // Alla olevassa rivissä value on binääriluku, >> kertoo, että bitit siirretään oikealle ja i kertoo montako bittiä siirrytään oikealle. 
-            // &-operaattori vertaa (value >> i) -arvoa ykköseen. Näin tila on varmasti bitin mukainen.
-            digitalWrite(dataPin, (value >> i) & 1); // Asetetaan SER-pinni joko matalaan tai korkeaan tilaan. LOW, jos (value >> i) on 0 ja HIGH, jos (value >> i) on 1.
+            digitalWrite(clockPin, LOW); // Set the SRCLK pin state to low to wait for the clock pulse.
+            // In the row below value is a binary number, >> tells us the direction where the bits of it are moved to and i tells how many times the bits are moved by one bit. 
+            // & operator compares (value >> i) to 1. This way we ensure that the state is same as the bit. 
+            digitalWrite(dataPin, (value >> i) & 1); // Set the SER pin state either to low or high. LOW if (value >> i) is 0 and HIGH if (value >> i) is 1.
 
-            digitalWrite(clockPin, HIGH); // Asetetaan SRCLK-pinni korkeaan tilaan: kellopulssi tapahtuu ja kellonreunalla dataPin-pinnin määräämä data siirtyy siirtorekisteriin.
+            digitalWrite(clockPin, HIGH); // Set the SRCLK pin state to high: the clock pulse happens and the data determined by the dataPin moves into the shift register on the edge of the clock.
         }
 
-        digitalWrite(latchPin, HIGH); // Asetetaan RCLK-pinni korkeaan tilaan, jotta kellonreunalla lähdöt QA-QH päivittyvät yhtäaikaa.
+        digitalWrite(latchPin, HIGH); // Set the RCLK pin state to high to update the QA-QH outputs at the same time.
     }
 }
 
 void writeHighAndLowNumber(uint8_t tens,uint8_t ones) 
 {
-    // See requirements for this function from display.h
+    writeByte(tens, true);
+    writeByte(ones, true);
+    delay(10000); // The delay is a temporary solution to reduce the amount of background flickering.
 }
 
-void showResult(byte number) 
+void showResult(byte number) // This subroutine is called in the void loop();
 {
-    // See requirements for this function from display.h
+    uint8_t tens = 0; // A variable to store the left number.
+    uint8_t ones = 0; // A variable to store the right number.
+    ones = number % 10; // Take the remainder from the given number when divided by ten and store it to ones. For example if the number is 17, the remainder will be 7.
+    tens = number / 10; // The number is then divided by ten to get the tens. For example if the number is 65, you'll get 6 because decimal numbers like 6.5 are rounded down in C.
+    Serial.print(tens); // A debug print.
+    Serial.println(ones); // A debug print.
+    writeHighAndLowNumber(tens, ones); // Call the writeHighAndLowNumber subroutine with both numbers given as parameters.
 }
