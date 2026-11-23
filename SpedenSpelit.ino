@@ -27,6 +27,8 @@ void setup() {
   initializeDisplay();
   initButtonsAndButtonInterrupts();
 
+  writeByte(0, true);
+
   // Timer setup
   noInterrupts();
   initializeTimer();
@@ -39,8 +41,6 @@ void loop() {
   if(!gameStarted && !showingResults) idle();
 
   gameInput();
-
-  //writeByte(8, true);
 
   if(!gameStarted && buttonNumber != -1) startTheGame();
   if(buttonNumber >= 0 && buttonNumber < 4) checkGame(buttonNumber);
@@ -96,7 +96,7 @@ ISR(TIMER1_COMPA_vect) {
     if(isrCallIndex % 10 == 0) {
       // Increase speed
 
-      if(OCR1A > 3000) OCR1A -= 1000;   // Clamp the speed-up
+      if(OCR1A > 3000) OCR1A -= 2000;   // Clamp the speed-up
     }
   }
 }
@@ -119,7 +119,21 @@ void gameInput() {
   // Select the first button that is pressed.
   // Kinda doesn't work if the player presses multiple buttons
   // But that isn't the idea of the game anyways...
+  static int previouslyPressed = -1;
+  int currentlyPressed = -1;
 
+  for(int i = 0; i < 4; i++) {
+    if(getButtonState(i) == LOW) {
+      currentlyPressed = i;
+      break;
+    }
+  }
+
+  if(previouslyPressed == -1 && currentlyPressed != -1) {
+    buttonNumber = currentlyPressed;
+  }
+
+  previouslyPressed = currentlyPressed;
 }
 
 void checkGame(byte lastButtonPress) {
@@ -142,8 +156,7 @@ void checkGame(byte lastButtonPress) {
     }
 
     //writeHighAndLowNumber(score / 10, score % 10);
-    writeByte(score / 10, true);
-    
+    writeByte(score % 10, true);
 
     Serial.print("Score: ");
     Serial.println(score);
@@ -183,6 +196,10 @@ void endTheGame(int scoreReached) {
   score = 0;
   OCR1A = 15624;
   TCNT1 = 0;
+
+  // Clear the display and leds
+  clearAllLeds();
+  writeByte(0, true);
 
   // Wait before going back to idle so the player sees their score
   // Done as an if statement at the top of loop()
