@@ -27,6 +27,8 @@ void setup() {
   initializeDisplay();
   initButtonsAndButtonInterrupts();
 
+  writeByte(0, true);
+
   // Timer setup
   noInterrupts();
   initializeTimer();
@@ -40,16 +42,11 @@ void loop() {
 
   gameInput();
 
+  if(!gameStarted && buttonNumber != -1) startTheGame();
   if(buttonNumber >= 0 && buttonNumber < 4) checkGame(buttonNumber);
-  else if(buttonNumber == 4) startTheGame();
-  buttonNumber = -1;                      // Reset button number for next cycle
+  buttonNumber = -1;                          // Reset button number for next cycle
 
   if(newTimerInterrupt == true) {
-    // new random number must be generated
-    // and corresponding let must be activated
-    
-    //Serial.println("Beep...Boop...Making a new number...");
-
     clearAllLeds();
 
     noInterrupts();
@@ -64,30 +61,30 @@ void loop() {
 }
 
 void initializeTimer(void) {
-    TCCR1A = 0;     // Clear these so there are no surprises ;)
-    TCCR1B = 0;
-    TCNT1 = 0;      // Counter starts from zero. Using CTC mode does this already but there could be some garbage left over.
+  TCCR1A = 0;     // Clear these so there are no surprises ;)
+  TCCR1B = 0;
+  TCNT1 = 0;      // Counter starts from zero. Using CTC mode does this already but there could be some garbage left over.
 
-    /*
-      With this formula a timer for a desired frequency can be made easily :P
+  /*
+    With this formula a timer for a desired frequency can be made easily :P
 
-      OCR = CPU / (PRESCALER * FREQ) - 1 = OUTPUT.
+    OCR = CPU / (PRESCALER * FREQ) - 1 = OUTPUT.
 
-      Since the ATMegaWhatevr in the arduino is 16 Mhz, if that 
-      is divided by the prescaler value times 1 (hz) - 1 (because counting starts at zero so at count 15624 there has been 15625 counts...) we get 1 hz.
+    Since the ATMegaWhatevr in the arduino is 16 Mhz, if that 
+    is divided by the prescaler value times 1 (hz) - 1 (because counting starts at zero so at count 15624 there has been 15625 counts...) we get 1 hz.
 
-      So...
+    So...
 
-      OCR = 16000000 / (1024 * 1) - 1 = 15624.
+    OCR = 16000000 / (1024 * 1) - 1 = 15624.
 
-      If the prescaler value is too small the output can be too large
-      to fit into a 16 bit unsigned integer (65500 or somethng) so by using a bigger prescaler that doesn't happen.
-      It does affect the resolution of the timer but this game is so slow it doesn't matter... Probably 乁( ˙ ω˙乁).
-    */
-    OCR1A = 15624;
+    If the prescaler value is too small the output can be too large
+    to fit into a 16 bit unsigned integer (65500 or somethng) so by using a bigger prescaler that doesn't happen.
+    It does affect the resolution of the timer but this game is so slow it doesn't matter... Probably 乁( ˙ ω˙乁).
+  */
+  OCR1A = 15624;
 
-    TCCR1B |= (1 << WGM12) | (1 << CS12) | (1 << CS10); // CTC mode (count up to OCR1A and then reset to 0), prescaler 1024 (CS12 and CS10 set).
-    TIMSK1 |= (1 << OCIE1A);                            // no OCIE1A, no isr :P when counter reaches OCR1A the isr func is run.
+  TCCR1B |= (1 << WGM12) | (1 << CS12) | (1 << CS10); // CTC mode (count up to OCR1A and then reset to 0), prescaler 1024 (CS12 and CS10 set).
+  TIMSK1 |= (1 << OCIE1A);                            // no OCIE1A, no isr :P when counter reaches OCR1A the isr func is run.
 }
 
 ISR(TIMER1_COMPA_vect) {
@@ -99,7 +96,7 @@ ISR(TIMER1_COMPA_vect) {
     if(isrCallIndex % 10 == 0) {
       // Increase speed
 
-      if(OCR1A > 3000) OCR1A -= 1000;   // Clamp the speed-up
+      if(OCR1A > 3000) OCR1A -= 2000;   // Clamp the speed-up
     }
   }
 }
@@ -122,18 +119,21 @@ void gameInput() {
   // Select the first button that is pressed.
   // Kinda doesn't work if the player presses multiple buttons
   // But that isn't the idea of the game anyways...
+  static int previouslyPressed = -1;
+  int currentlyPressed = -1;
 
-  // TODO: Move this to the debounce() since it'd make more sense there.
-  // TODO 2 (won't be needed if the above is done): buttonNumber isn't visible to this file because it's declared in the source file. 
   for(int i = 0; i < 4; i++) {
-    if(buttonState[i] == LOW) {
-      buttonNumber = i;
-
-      // Redundant print as this is printed from the debounce() function as well.
-      Serial.print("Pressed: ");
-      Serial.println(i);
+    if(getButtonState(i) == LOW) {
+      currentlyPressed = i;
+      break;
     }
   }
+
+  if(previouslyPressed == -1 && currentlyPressed != -1) {
+    buttonNumber = currentlyPressed;
+  }
+
+  previouslyPressed = currentlyPressed;
 }
 
 void checkGame(byte lastButtonPress) {
@@ -155,7 +155,8 @@ void checkGame(byte lastButtonPress) {
       return;
     }
 
-    writeHighAndLowNumber(score / 10, score % 10);
+    //writeHighAndLowNumber(score / 10, score % 10);
+    writeByte(score % 10, true);
 
     Serial.print("Score: ");
     Serial.println(score);
@@ -189,11 +190,16 @@ void startTheGame() {
 void endTheGame(int scoreReached) {
   // Reset stuff
   gameStarted = false;
+  buttonNumber = -1;
   newTimerInterrupt = false;
   isrCallIndex = 0;
   score = 0;
   OCR1A = 15624;
   TCNT1 = 0;
+
+  // Clear the display and leds
+  clearAllLeds();
+  writeByte(0, true);
 
   // Wait before going back to idle so the player sees their score
   // Done as an if statement at the top of loop()
