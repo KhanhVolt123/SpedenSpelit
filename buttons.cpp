@@ -49,7 +49,6 @@ void debounce(void){
     if((millis() - lastDebounceTime[i]) > debounceDelay){ // checks if enoungh time has passed when since buttonstate last changed
       if(reading != buttonState[i]){ // checks if the button state has changed
         buttonState[i] = reading; // saves the current button state buttonsate[i]
-        if (buttonState[i] == LOW) { // checks if button is pressed
           Serial.println(buttonpin[i]); //prints the pin number of the pressed to serial monitor
         }
       }
