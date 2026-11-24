@@ -37,7 +37,7 @@ void setup() {
 }
 
 void loop() {
-  if(showingResults && wait(2000, resultTimer)) showingResults = false;
+  if(showingResults && utils::wait(2000, resultTimer)) showingResults = false;
   if(!gameStarted && !showingResults) idle();
 
   gameInput();
@@ -212,7 +212,14 @@ void idle() {
   static byte step = 0;
   static unsigned long timer = 0;
 
-  if(!wait(500, timer)) return;
+  if(step == 4) {
+    if(show2(2)) {
+      step = (step + 1) % 7;
+    }
+    return;
+  }
+
+  if(!utils::wait(500, timer)) return;
   clearAllLeds();
 
   switch(step) {
@@ -220,19 +227,10 @@ void idle() {
     case 1: setLed(0); setLed(2); break;
     case 2: setLed(1); setLed(3); break;
     case 3: setLed(0); setLed(2); break;
-    case 4: show2(2); break;
     case 5: clearAllLeds(); break;
     case 6: setAllLeds(); break;
   }
 
   // Every 500 ms the step is incremented until it reaches 6 when it "goes back" to 0
   step = (step + 1) % 7;
-}
-
-bool wait(unsigned long ms, unsigned long &last) {
-  unsigned long now = millis();
-  if(now - last < ms) return false;
-  last = now;
-
-  return true;
 }

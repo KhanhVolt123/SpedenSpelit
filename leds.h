@@ -2,6 +2,8 @@
 #define LEDS_H
 #include <arduino.h>
 
+#include "Utils.h"
+
 /*
   initializeLeds() subroutine intializes analog pins A2,A3,A4,A5
   to be used as outputs. Speden Spelit leds are connected to those
@@ -46,6 +48,6 @@ void setAllLeds(void);
   int rounds: This parameter determines how many times 0,1,2,3 sequence
               is shown.
 */
-void show2(int);
+bool show2(int);
 
 #endif
