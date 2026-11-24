@@ -155,8 +155,7 @@ void checkGame(byte lastButtonPress) {
       return;
     }
 
-    //writeHighAndLowNumber(score / 10, score % 10);
-    writeByte(score % 10, true);
+    writeHighAndLowNumber(score / 10, score % 10);
 
     Serial.print("Score: ");
     Serial.println(score);
